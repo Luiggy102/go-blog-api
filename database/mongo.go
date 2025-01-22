@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Luiggy102/go-blog-api/models"
 	"github.com/joho/godotenv"
 	// "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -37,4 +38,16 @@ func (mongo *MongoDb) Close() error {
 		return err
 	}
 	return nil
+}
+
+// insert post
+func (mongo *MongoDb) InsertPost(post models.Post) (postId interface{}, err error) {
+	// the collection
+	coll := mongo.db.Database("go_blog").Collection("posts")
+	// insert document
+	result, err := coll.InsertOne(context.TODO(), post)
+	if err != nil {
+		return nil, err
+	}
+	return result.InsertedID, nil
 }

@@ -21,7 +21,8 @@ func main() {
 
 	// handler func
 	// home
-	http.HandleFunc("GET /", handlers.HomeHandler)
+	http.HandleFunc("GET /", handlers.HomeHandler())
+	http.HandleFunc("POST /posts", handlers.InsertPostHandler())
 	// posts
 
 	fmt.Println("Server started at port", port)
