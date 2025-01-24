@@ -101,3 +101,29 @@ func (mongo *MongoDb) GetPostById(id string) (models.Post, error) {
 	}
 	return post, nil
 }
+
+// UpdatePost
+func (mongo *MongoDb) UpdatePost(post models.Post) error {
+	coll := mongo.db.Database("go_blog", nil).Collection("posts", nil)
+	filter := bson.D{{Key: "_id", Value: post.Id}}
+	// log.Println(filter)
+
+	update := bson.D{{Key: "$set", Value: bson.D{
+		{Key: "post_content", Value: post.PostContent},
+		{Key: "updated_at", Value: post.UpdatedAt},
+	}}}
+	opts := options.Update().SetUpsert(true)
+
+	// results, err := coll.UpdateOne(context.TODO(), filter, update, opts)
+	// log.Println("upserted id", results.UpsertedID)
+	// log.Println("upsert count", results.UpsertedCount)
+	// log.Println("matched", results.MatchedCount)
+	// log.Println("modified", results.ModifiedCount)
+
+	_, err := coll.UpdateOne(context.TODO(), filter, update, opts)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}

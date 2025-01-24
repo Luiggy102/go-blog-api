@@ -12,13 +12,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type insertPostRequest struct {
+type upsertPostRequest struct {
 	PostContent string `json:"post_content"`
 }
 type insertPostResponse struct {
 	// Id interface{} `json:"post_id"`
 	// Message string      `json:"message"`
 	models.Post
+}
+type messageResponse struct {
+	Message string `json:"message"`
 }
 
 func InsertPostHandler() http.HandlerFunc {
@@ -38,7 +41,7 @@ func InsertPostHandler() http.HandlerFunc {
 		}
 
 		// decode request
-		postRequest := insertPostRequest{}
+		postRequest := upsertPostRequest{}
 		err = json.NewDecoder(r.Body).Decode(&postRequest)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -160,6 +163,61 @@ func GetPostsbyIdHandler() http.HandlerFunc {
 		// return post
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(&post)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// UpdatePost
+func UpdatePostHander() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		mongo, err := database.NewMongoDb()
+		defer func() {
+			err = mongo.Close()
+			if err != nil {
+				log.Fatalln("error closing db", err.Error())
+			}
+		}()
+		if err != nil {
+			log.Fatalln("Error in db connection")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// handle Request
+
+		// decode request
+		updateRequest := upsertPostRequest{}
+		err = json.NewDecoder(r.Body).Decode(&updateRequest)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// get post Id
+		id := r.PathValue("id")
+		objId, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// update data
+		err = mongo.UpdatePost(models.Post{
+			Id:          objId,
+			PostContent: updateRequest.PostContent,
+			UpdatedAt:   time.Now(),
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// send response
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(&messageResponse{"ok"})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
