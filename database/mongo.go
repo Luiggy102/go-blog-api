@@ -110,6 +110,7 @@ func (mongo *MongoDb) UpdatePost(post models.Post) error {
 
 	update := bson.D{{Key: "$set", Value: bson.D{
 		{Key: "post_content", Value: post.PostContent},
+		// {Key: "created_at", Value: post.CreatedAt},
 		{Key: "updated_at", Value: post.UpdatedAt},
 	}}}
 	opts := options.Update().SetUpsert(true)
