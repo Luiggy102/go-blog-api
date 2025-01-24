@@ -9,7 +9,7 @@ import (
 
 	"github.com/Luiggy102/go-blog-api/database"
 	"github.com/Luiggy102/go-blog-api/models"
-	"github.com/segmentio/ksuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type insertPostRequest struct {
@@ -45,15 +45,16 @@ func InsertPostHandler() http.HandlerFunc {
 			return
 		}
 		// create a random id
-		newId, err := ksuid.NewRandom()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		newId := primitive.NewObjectID()
+		// newId, err := ksuid.NewRandom()
+		// if err != nil {
+		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+		// 	return
+		// }
 
 		// new post
 		p := models.Post{
-			Id:          newId.String(),
+			Id:          newId,
 			PostContent: postRequest.PostContent,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
