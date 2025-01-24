@@ -21,9 +21,11 @@ func main() {
 	// handler func
 	// home
 	http.HandleFunc("GET /", handlers.HomeHandler())
+
+	// posts
 	http.HandleFunc("POST /posts", handlers.InsertPostHandler())
 	http.HandleFunc("GET /posts", handlers.GetPostsHandler())
-	// posts
+	http.HandleFunc("GET /posts/{id}", handlers.GetPostsbyIdHandler())
 
 	fmt.Println("Server started at port", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%s", port), nil)

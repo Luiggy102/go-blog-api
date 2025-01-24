@@ -132,3 +132,37 @@ func GetPostsHandler() http.HandlerFunc {
 		}
 	}
 }
+
+// GetPostsbyIdHandler
+func GetPostsbyIdHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		mongo, err := database.NewMongoDb()
+		defer func() {
+			err = mongo.Close()
+			if err != nil {
+				log.Fatalln("error closing db", err.Error())
+			}
+		}()
+		if err != nil {
+			log.Fatalln("Error in db connection")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// get id
+		id := r.PathValue("id")
+		post, err := mongo.GetPostById(id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// return post
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(&post)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}

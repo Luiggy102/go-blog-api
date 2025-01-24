@@ -8,6 +8,7 @@ import (
 	"github.com/Luiggy102/go-blog-api/models"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -75,4 +76,28 @@ func (mongo *MongoDb) GetPosts(page int64) ([]models.Post, error) {
 		return nil, err
 	}
 	return results, nil
+}
+
+// getPostById
+func (mongo *MongoDb) GetPostById(id string) (models.Post, error) {
+	var err error
+	objId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return models.Post{}, err
+	}
+	coll := mongo.db.Database("go_blog", nil).Collection("posts", nil)
+	filter := bson.D{{Key: "_id", Value: objId}}
+
+	result := coll.FindOne(context.TODO(), filter, nil)
+	err = result.Err()
+	if err != nil {
+		return models.Post{}, err
+	}
+
+	post := models.Post{}
+	err = result.Decode(&post)
+	if err != nil {
+		return models.Post{}, err
+	}
+	return post, nil
 }
