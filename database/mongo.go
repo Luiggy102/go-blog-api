@@ -7,7 +7,7 @@ import (
 
 	"github.com/Luiggy102/go-blog-api/models"
 	"github.com/joho/godotenv"
-	// "go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -41,13 +41,38 @@ func (mongo *MongoDb) Close() error {
 }
 
 // insert post
-func (mongo *MongoDb) InsertPost(post models.Post) (postId interface{}, err error) {
+func (mongo *MongoDb) InsertPost(post models.Post) (err error) {
 	// the collection
 	coll := mongo.db.Database("go_blog").Collection("posts")
 	// insert document
-	result, err := coll.InsertOne(context.TODO(), post)
+	_, err = coll.InsertOne(context.TODO(), post)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// get posts
+func (mongo *MongoDb) GetPosts(page int64) ([]models.Post, error) {
+	coll := mongo.db.Database("go_blog").Collection("posts")
+
+	// find options
+	filter := bson.D{{}}
+	opts := options.Find().SetLimit(3).SetSkip((page - 1) * 3)
+
+	cursor, err := coll.Find(context.TODO(), filter, opts)
+	if err != nil {
+		log.Println("error finding documents")
 		return nil, err
 	}
-	return result.InsertedID, nil
+
+	results := []models.Post{}
+
+	// send the results
+	err = cursor.All(context.TODO(), &results)
+	if err != nil {
+		log.Println("error parsing results")
+		return nil, err
+	}
+	return results, nil
 }

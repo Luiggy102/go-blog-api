@@ -4,17 +4,19 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Luiggy102/go-blog-api/database"
 	"github.com/Luiggy102/go-blog-api/models"
+	"github.com/segmentio/ksuid"
 )
 
 type insertPostRequest struct {
 	PostContent string `json:"post_content"`
 }
 type insertPostResponse struct {
-	Id interface{} `json:"post_id"`
+	// Id interface{} `json:"post_id"`
 	// Message string      `json:"message"`
 	models.Post
 }
@@ -42,21 +44,28 @@ func InsertPostHandler() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		// create a random id
+		newId, err := ksuid.NewRandom()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		// new post
 		p := models.Post{
+			Id:          newId.String(),
 			PostContent: postRequest.PostContent,
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
 
 		// insert post into db
-		postId, err := mongo.InsertPost(p)
+		err = mongo.InsertPost(p)
+		log.Printf("Post created with ID: %v", newId.String())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		log.Printf("Post created with ID: %v", postId)
 
 		// send reponse
 		w.Header().Set("Content-Type", "application/json")
@@ -64,10 +73,59 @@ func InsertPostHandler() http.HandlerFunc {
 		// 	Message: "ok",
 		// })
 		err = json.NewEncoder(w).Encode(&insertPostResponse{
-			Id:   postId,
 			Post: p,
 		})
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func GetPostsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		// pagination
+		pageStr := r.URL.Query().Get("page")
+		// default value
+		var page = uint64(1)
+
+		if pageStr != "" {
+			// not empty = now value
+			page, err = strconv.ParseUint(pageStr, 10, 64)
+			if err != nil {
+				// an error like `/posts?page=foo`
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+
+		mongo, err := database.NewMongoDb()
+		defer func() {
+			err = mongo.Close()
+			if err != nil {
+				log.Fatalln("error closing db", err.Error())
+			}
+		}()
+
+		if err != nil {
+			log.Fatalln("Error in db connection")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		posts, err := mongo.GetPosts(int64(page))
+		if err != nil {
+			log.Fatalln("Error fetching data from db")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// send the response
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(posts)
+		if err != nil {
+			log.Fatalln("error parsing posts data")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

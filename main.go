@@ -17,12 +17,12 @@ func main() {
 		log.Fatalln("Error loading env vars", err.Error())
 	}
 	port := os.Getenv("PORT")
-	// dbUrl := os.Getenv("DATABASE_URL")
 
 	// handler func
 	// home
 	http.HandleFunc("GET /", handlers.HomeHandler())
 	http.HandleFunc("POST /posts", handlers.InsertPostHandler())
+	http.HandleFunc("GET /posts", handlers.GetPostsHandler())
 	// posts
 
 	fmt.Println("Server started at port", port)
