@@ -65,7 +65,7 @@ func InsertPostHandler() http.HandlerFunc {
 
 		// insert post into db
 		err = mongo.InsertPost(p)
-		log.Printf("Post created with ID: %v", newId.String())
+		// log.Printf("Post created with ID: %v", newId.String())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -210,6 +210,41 @@ func UpdatePostHander() http.HandlerFunc {
 			PostContent: updateRequest.PostContent,
 			UpdatedAt:   time.Now(),
 		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// send response
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(&messageResponse{"ok"})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// delete post
+func DeletePostHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		mongo, err := database.NewMongoDb()
+		defer func() {
+			err = mongo.Close()
+			if err != nil {
+				log.Fatalln("error closing db", err.Error())
+			}
+		}()
+		if err != nil {
+			log.Fatalln("Error in db connection")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// post id
+		postId := r.PathValue("id")
+
+		err = mongo.DeletePost(postId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

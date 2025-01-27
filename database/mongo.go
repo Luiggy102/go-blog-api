@@ -128,3 +128,19 @@ func (mongo *MongoDb) UpdatePost(post models.Post) error {
 	}
 	return nil
 }
+
+// DeletePost
+func (mongo *MongoDb) DeletePost(id string) error {
+	coll := mongo.db.Database("go_blog").Collection("posts")
+	objId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{{Key: "_id", Value: objId}}
+	_, err = coll.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		return err
+	}
+	// log.Println(res.DeletedCount)
+	return nil
+}
