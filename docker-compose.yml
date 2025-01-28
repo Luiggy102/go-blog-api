@@ -5,9 +5,8 @@ services:
   api:
     build: .
     command: /app/blog-api
-    environment:
-      DATABASE_URL: mongodb://db:27017
-      PORT: 8080
+    env_file:
+      - ".env"
     ports:
       - "8080:8080"
     depends_on:
