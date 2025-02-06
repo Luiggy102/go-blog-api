@@ -24,9 +24,13 @@ docker compose up
 
 ## Endpoints
 `GET /`: Shows a welcome message
+
 `GET /posts/`: List the firsts posts
+
 `GET /posts/{id}`: Get the post info by the post ID
+
 `GET /posts/{id}`: Get the post info by the post ID
+
 `GET /posts?page=2`: Pagination feature to see posts
 
 `POST /posts`: Insert a post in JSON format
@@ -35,6 +39,7 @@ Example:
 {
     "post_content": "sample text"
 }
+
 ```
 `PUT /posts/{id}`: Update the post using the post ID, receive a JSON with the content to be updated
 ```json
