@@ -2,14 +2,16 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Luiggy102/go-blog-api/database"
 	"github.com/Luiggy102/go-blog-api/models"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type upsertPostRequest struct {
@@ -24,69 +26,55 @@ type messageResponse struct {
 	Message string `json:"message"`
 }
 
-func InsertPostHandler() http.HandlerFunc {
+func InsertPostHandler(mongo *database.MongoDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		mongo, err := database.NewMongoDb()
-		defer func() {
-			err = mongo.Close()
-			if err != nil {
-				log.Fatalln("error closing db", err.Error())
-			}
-		}()
-
-		if err != nil {
-			log.Fatalln("Error in db connection")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 		// decode request
 		postRequest := upsertPostRequest{}
-		err = json.NewDecoder(r.Body).Decode(&postRequest)
+		err := json.NewDecoder(r.Body).Decode(&postRequest)
+		io.Copy(io.Discard, r.Body)
+		r.Body.Close()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("Error decoding body:", err.Error())
+			http.Error(w, "JSON is not valid", http.StatusInternalServerError)
 			return
 		}
+
 		// create a random id
-		newId := primitive.NewObjectID()
-		// newId, err := ksuid.NewRandom()
-		// if err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
+		newId := uuid.New().String()
 
 		// new post
+		now := time.Now()
 		p := models.Post{
 			Id:          newId,
 			PostContent: postRequest.PostContent,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			CreatedAt:   now,
+			UpdatedAt:   now,
 		}
 
 		// insert post into db
 		err = mongo.InsertPost(p)
-		// log.Printf("Post created with ID: %v", newId.String())
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("Error inserting post:", err.Error())
+			http.Error(w, "Error persisting data", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("Post created with ID: %v", newId)
 
 		// send reponse
 		w.Header().Set("Content-Type", "application/json")
-		// err = json.NewEncoder(w).Encode(&insertPostResponse{
-		// 	Message: "ok",
-		// })
 		err = json.NewEncoder(w).Encode(&insertPostResponse{
 			Post: p,
 		})
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("DEV: Error encoding response:", err.Error())
+			http.Error(w, "Oops", http.StatusInternalServerError)
 			return
 		}
 	}
 }
 
-func GetPostsHandler() http.HandlerFunc {
+func GetPostsHandler(mongo *database.MongoDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// pagination
@@ -102,20 +90,6 @@ func GetPostsHandler() http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-		}
-
-		mongo, err := database.NewMongoDb()
-		defer func() {
-			err = mongo.Close()
-			if err != nil {
-				log.Fatalln("error closing db", err.Error())
-			}
-		}()
-
-		if err != nil {
-			log.Fatalln("Error in db connection")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 
 		posts, err := mongo.GetPosts(int64(page))
@@ -137,20 +111,8 @@ func GetPostsHandler() http.HandlerFunc {
 }
 
 // GetPostsbyIdHandler
-func GetPostsbyIdHandler() http.HandlerFunc {
+func GetPostsbyIdHandler(mongo *database.MongoDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		mongo, err := database.NewMongoDb()
-		defer func() {
-			err = mongo.Close()
-			if err != nil {
-				log.Fatalln("error closing db", err.Error())
-			}
-		}()
-		if err != nil {
-			log.Fatalln("Error in db connection")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 		// get id
 		id := r.PathValue("id")
@@ -171,26 +133,13 @@ func GetPostsbyIdHandler() http.HandlerFunc {
 }
 
 // UpdatePost
-func UpdatePostHander() http.HandlerFunc {
+func UpdatePostHander(mongo *database.MongoDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		mongo, err := database.NewMongoDb()
-		defer func() {
-			err = mongo.Close()
-			if err != nil {
-				log.Fatalln("error closing db", err.Error())
-			}
-		}()
-		if err != nil {
-			log.Fatalln("Error in db connection")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
 		// handle Request
 
 		// decode request
 		updateRequest := upsertPostRequest{}
-		err = json.NewDecoder(r.Body).Decode(&updateRequest)
+		err := json.NewDecoder(r.Body).Decode(&updateRequest)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -198,16 +147,12 @@ func UpdatePostHander() http.HandlerFunc {
 
 		// get post Id
 		id := r.PathValue("id")
-		objId, err := primitive.ObjectIDFromHex(id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 		// update data
 		err = mongo.UpdatePost(models.Post{
-			Id:          objId,
+			Id:          id,
 			PostContent: updateRequest.PostContent,
+			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		})
 		if err != nil {
@@ -226,25 +171,13 @@ func UpdatePostHander() http.HandlerFunc {
 }
 
 // delete post
-func DeletePostHandler() http.HandlerFunc {
+func DeletePostHandler(mongo *database.MongoDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		mongo, err := database.NewMongoDb()
-		defer func() {
-			err = mongo.Close()
-			if err != nil {
-				log.Fatalln("error closing db", err.Error())
-			}
-		}()
-		if err != nil {
-			log.Fatalln("Error in db connection")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 		// post id
 		postId := r.PathValue("id")
 
-		err = mongo.DeletePost(postId)
+		err := mongo.DeletePost(postId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

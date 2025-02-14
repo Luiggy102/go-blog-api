@@ -2,11 +2,11 @@ services:
   db:
     build: ./database
     restart: always
+    ports:
+      - "27017:27017"
   api:
     build: .
     command: /app/blog-api
-    env_file:
-      - ".env"
     ports:
       - "8080:8080"
     depends_on:

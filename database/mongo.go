@@ -3,38 +3,41 @@ package database
 import (
 	"context"
 	"log"
-	"os"
 
-	"github.com/Luiggy102/go-blog-api/models"
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+
+	"github.com/Luiggy102/go-blog-api/models"
 )
 
 type MongoDb struct {
-	db *mongo.Client
+	client *mongo.Client
+	db     *mongo.Database
 }
 
-func getDbURl() string {
-	var err error = godotenv.Load("./.env")
-	if err != nil {
-		log.Fatalln("Error loading env vars", err.Error())
-	}
-	return os.Getenv("DATABASE_URL")
-}
+func NewMongoDb(db_url string) (*MongoDb, error) {
 
-func NewMongoDb() (*MongoDb, error) {
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(getDbURl()))
+	cs, err := connstring.Parse(db_url)
 	if err != nil {
 		return nil, err
 	}
-	return &MongoDb{db: client}, nil
+
+	optionsClient := options.Client().ApplyURI(db_url)
+	client, err := mongo.Connect(context.Background(), optionsClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MongoDb{
+		client: client,
+		db:     client.Database(cs.Database),
+	}, nil
 }
 
 func (mongo *MongoDb) Close() error {
-	err := mongo.db.Disconnect(context.TODO())
+	err := mongo.client.Disconnect(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -44,7 +47,7 @@ func (mongo *MongoDb) Close() error {
 // insert post
 func (mongo *MongoDb) InsertPost(post models.Post) (err error) {
 	// the collection
-	coll := mongo.db.Database("go_blog").Collection("posts")
+	coll := mongo.db.Collection("posts")
 	// insert document
 	_, err = coll.InsertOne(context.TODO(), post)
 	if err != nil {
@@ -55,11 +58,12 @@ func (mongo *MongoDb) InsertPost(post models.Post) (err error) {
 
 // get posts
 func (mongo *MongoDb) GetPosts(page int64) ([]models.Post, error) {
-	coll := mongo.db.Database("go_blog").Collection("posts")
+	coll := mongo.db.Collection("posts")
 
 	// find options
 	filter := bson.D{{}}
-	opts := options.Find().SetLimit(3).SetSkip((page - 1) * 3)
+	page_size := int64(10)
+	opts := options.Find().SetLimit(page_size).SetSkip((page - 1) * page_size)
 
 	cursor, err := coll.Find(context.TODO(), filter, opts)
 	if err != nil {
@@ -80,16 +84,11 @@ func (mongo *MongoDb) GetPosts(page int64) ([]models.Post, error) {
 
 // getPostById
 func (mongo *MongoDb) GetPostById(id string) (models.Post, error) {
-	var err error
-	objId, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return models.Post{}, err
-	}
-	coll := mongo.db.Database("go_blog", nil).Collection("posts", nil)
-	filter := bson.D{{Key: "_id", Value: objId}}
+	coll := mongo.db.Collection("posts", nil)
+	filter := bson.D{{Key: "_id", Value: id}}
 
 	result := coll.FindOne(context.TODO(), filter, nil)
-	err = result.Err()
+	err := result.Err()
 	if err != nil {
 		return models.Post{}, err
 	}
@@ -104,22 +103,26 @@ func (mongo *MongoDb) GetPostById(id string) (models.Post, error) {
 
 // UpdatePost
 func (mongo *MongoDb) UpdatePost(post models.Post) error {
-	coll := mongo.db.Database("go_blog", nil).Collection("posts", nil)
+	coll := mongo.db.Collection("posts", nil)
 	filter := bson.D{{Key: "_id", Value: post.Id}}
 	// log.Println(filter)
 
-	update := bson.D{{Key: "$set", Value: bson.D{
-		{Key: "post_content", Value: post.PostContent},
-		// {Key: "created_at", Value: post.CreatedAt},
-		{Key: "updated_at", Value: post.UpdatedAt},
-	}}}
+	update := bson.D{
+		{
+			Key: "$set",
+			Value: bson.D{
+				{Key: "post_content", Value: post.PostContent},
+				{Key: "updated_at", Value: post.UpdatedAt},
+			},
+		},
+		{
+			Key: "$setOnInsert",
+			Value: bson.D{
+				{Key: "created_at", Value: post.CreatedAt},
+			},
+		},
+	}
 	opts := options.Update().SetUpsert(true)
-
-	// results, err := coll.UpdateOne(context.TODO(), filter, update, opts)
-	// log.Println("upserted id", results.UpsertedID)
-	// log.Println("upsert count", results.UpsertedCount)
-	// log.Println("matched", results.MatchedCount)
-	// log.Println("modified", results.ModifiedCount)
 
 	_, err := coll.UpdateOne(context.TODO(), filter, update, opts)
 
@@ -131,13 +134,9 @@ func (mongo *MongoDb) UpdatePost(post models.Post) error {
 
 // DeletePost
 func (mongo *MongoDb) DeletePost(id string) error {
-	coll := mongo.db.Database("go_blog").Collection("posts")
-	objId, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	filter := bson.D{{Key: "_id", Value: objId}}
-	_, err = coll.DeleteOne(context.TODO(), filter)
+	coll := mongo.db.Collection("posts")
+	filter := bson.D{{Key: "_id", Value: id}}
+	_, err := coll.DeleteOne(context.TODO(), filter)
 	if err != nil {
 		return err
 	}

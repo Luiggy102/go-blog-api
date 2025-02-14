@@ -1,36 +1,44 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/Luiggy102/go-blog-api/handlers"
-	"github.com/joho/godotenv"
+	"github.com/Luiggy102/go-blog-api/app"
 )
 
 func main() {
-	// load env vars
-	err := godotenv.Load("./.env")
+
+	// Read config
+	f, err := os.Open("config.json") // might be configurable
 	if err != nil {
-		log.Fatalln("Error loading env vars", err.Error())
+		log.Println("Error opening config.json", err)
 	}
-	port := os.Getenv("PORT")
 
-	// handler func
-	// home
-	http.HandleFunc("GET /", handlers.HomeHandler())
+	config := app.Config{
+		DatabaseUrl: "mongodb://localhost:27017/xxxx",
+		Addr:        "172.26.0.2:8080",
+	}
 
-	// posts
-	http.HandleFunc("POST /posts", handlers.InsertPostHandler())
-	http.HandleFunc("GET /posts", handlers.GetPostsHandler())
-	http.HandleFunc("GET /posts/{id}", handlers.GetPostsbyIdHandler())
-	http.HandleFunc("PUT /posts/{id}", handlers.UpdatePostHander())
-	http.HandleFunc("DELETE /posts/{id}", handlers.DeletePostHandler())
+	err = json.NewDecoder(f).Decode(&config)
+	if err != nil {
+		log.Println("Error parsing config.json", err)
+	}
 
-	fmt.Println("Server started at port", port)
-	err = http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
+	fmt.Println("Config:", config)
+
+	// Instantiate an application
+	s, err := app.Bootstrap(&config)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(21)
+	}
+
+	// Start server
+	fmt.Println("Server started at port", s.Addr)
+	err = s.ListenAndServe()
 	if err != nil {
 		log.Fatalln("Error starting API", err.Error())
 	}
