@@ -25,9 +25,7 @@ docker compose up
 ## Endpoints
 `GET /`: Shows a welcome message
 
-`GET /posts/`: List the firsts posts
-
-`GET /posts/{id}`: Get the post info by the post ID
+`GET /posts`: List the firsts posts
 
 `GET /posts/{id}`: Get the post info by the post ID
 
