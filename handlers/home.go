@@ -11,7 +11,7 @@ import (
 func HomeHandler(mongo *database.MongoDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		posts, err := mongo.GetPosts(1)
+		posts, err := mongo.GetPosts(0)
 		if err != nil {
 			log.Println(err.Error())
 			http.Error(w, "Error fetching data from db", http.StatusInternalServerError)
@@ -42,6 +42,7 @@ article {
 	<h1>Blog</h1>
 	{{ range $post := .posts }}
 	<article class="post">
+        <h3>{{ .PostTitle}}</h2>
 		{{ .PostContent }}
 	</article>
 	{{ end }}

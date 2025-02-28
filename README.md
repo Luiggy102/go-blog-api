@@ -35,6 +35,7 @@ docker compose up
 Example:
 ```json
 {
+    "post_title": "post title"
     "post_content": "sample text"
 }
 
@@ -42,6 +43,7 @@ Example:
 `PUT /posts/{id}`: Update the post using the post ID, receive a JSON with the content to be updated
 ```json
 {
+    "post_title": "new post title"
     "post_content": "update text"
 }
 ```

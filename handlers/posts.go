@@ -15,6 +15,7 @@ import (
 )
 
 type upsertPostRequest struct {
+	PostTitle   string `json:"post_title"`
 	PostContent string `json:"post_content"`
 }
 type insertPostResponse struct {
@@ -47,6 +48,7 @@ func InsertPostHandler(mongo *database.MongoDb) http.HandlerFunc {
 		now := time.Now()
 		p := models.Post{
 			Id:          newId,
+			PostTitle:   postRequest.PostTitle,
 			PostContent: postRequest.PostContent,
 			CreatedAt:   now,
 			UpdatedAt:   now,
@@ -151,9 +153,10 @@ func UpdatePostHander(mongo *database.MongoDb) http.HandlerFunc {
 		// update data
 		err = mongo.UpdatePost(models.Post{
 			Id:          id,
+			PostTitle:   updateRequest.PostTitle,
 			PostContent: updateRequest.PostContent,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			// CreatedAt:   time.Now(),
+			UpdatedAt: time.Now(),
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

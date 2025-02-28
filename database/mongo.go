@@ -72,8 +72,16 @@ func (mongo *MongoDb) GetPosts(page int64) ([]models.Post, error) {
 
 	// find options
 	filter := bson.D{{}}
+
+	var opts *options.FindOptions
 	page_size := int64(10)
-	opts := options.Find().SetLimit(page_size).SetSkip((page - 1) * page_size)
+
+	// 0 = all posts, 1... normal pagination
+	if page == 0 {
+		opts = options.Find()
+	} else {
+		opts = options.Find().SetLimit(page_size).SetSkip((page - 1) * page_size)
+	}
 
 	cursor, err := coll.Find(context.TODO(), filter, opts)
 	if err != nil {
@@ -121,6 +129,7 @@ func (mongo *MongoDb) UpdatePost(post models.Post) error {
 		{
 			Key: "$set",
 			Value: bson.D{
+				{Key: "post_title", Value: post.PostTitle},
 				{Key: "post_content", Value: post.PostContent},
 				{Key: "updated_at", Value: post.UpdatedAt},
 			},
