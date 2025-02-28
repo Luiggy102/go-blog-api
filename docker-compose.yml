@@ -1,7 +1,11 @@
 services:
   db:
-    build: ./database
+    image: mongo
     restart: always
+    volumes:
+      - ./database/mongo-init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      - MONGO_INITDB_DATABASE=go_blog
   api:
     build: .
     command: /app/blog-api
