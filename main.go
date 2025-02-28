@@ -17,17 +17,20 @@ func main() {
 		log.Println("Error opening config.json", err)
 	}
 
-	config := app.Config{
-		DatabaseUrl: "mongodb://localhost:27017/xxxx",
-		Addr:        "172.26.0.2:8080",
+	config := app.Config{}
+	// running in a docker (compose) check
+	// default local config
+	if os.Getenv("DB_URL") == "" && os.Getenv("ADDR") == "" {
+		err = json.NewDecoder(f).Decode(&config)
+		if err != nil {
+			log.Println("Error parsing config.json", err)
+		}
+	} else { // docker config
+		config.Addr = os.Getenv("ADDR")
+		config.DatabaseUrl = os.Getenv("DB_URL")
 	}
 
-	err = json.NewDecoder(f).Decode(&config)
-	if err != nil {
-		log.Println("Error parsing config.json", err)
-	}
-
-	fmt.Println("Config:", config)
+	fmt.Println(config)
 
 	// Instantiate an application
 	s, err := app.Bootstrap(&config)

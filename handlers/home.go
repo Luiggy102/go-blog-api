@@ -1,17 +1,12 @@
 package handlers
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 
 	"github.com/Luiggy102/go-blog-api/database"
 )
-
-type homeResponse struct {
-	Message string `json:"message"`
-}
 
 func HomeHandler(mongo *database.MongoDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -22,8 +17,6 @@ func HomeHandler(mongo *database.MongoDb) http.HandlerFunc {
 			http.Error(w, "Error fetching data from db", http.StatusInternalServerError)
 			return
 		}
-
-		fmt.Println(posts)
 
 		t, err := template.New("home.html").Parse(`
 

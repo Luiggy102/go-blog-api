@@ -14,6 +14,10 @@ type Config struct {
 	Addr        string `json:"addr"`
 }
 
+func (c Config) String() string {
+	return fmt.Sprintf("Addr: %s\nDBURL: %s\n", c.Addr, c.DatabaseUrl)
+}
+
 // Bootstrap: setup and configure application
 func Bootstrap(config *Config) (*http.Server, error) {
 
@@ -44,7 +48,7 @@ func Bootstrap(config *Config) (*http.Server, error) {
 
 func MiddlewareAccessLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println(r.Method, r.URL)
+		log.Println(r.Method, r.URL, "\t", r.UserAgent())
 		next.ServeHTTP(w, r)
 	})
 }

@@ -23,12 +23,22 @@ func NewMongoDb(db_url string) (*MongoDb, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = cs.Validate()
+	if err != nil {
+		return nil, err
+	}
 
 	optionsClient := options.Client().ApplyURI(db_url)
 	client, err := mongo.Connect(context.Background(), optionsClient)
 	if err != nil {
 		return nil, err
 	}
+
+	err = client.Ping(context.TODO(), nil)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("Database connected successfully!")
 
 	return &MongoDb{
 		client: client,
